@@ -1,0 +1,98 @@
+# -*- coding: utf-8 -*-
+
+import cv2
+import numpy as np
+import random
+
+img = cv2.imread('C:/Users/feiyu1/Desktop/xuexi/dark.jpg')
+print(img.shape)
+class augmentation(object):
+    def __init__(self, img):
+        self.img = img
+        
+    # image crop   
+    def crop(self):
+        #h1,h2 mean the range of height, w1,w2 mean the range of width
+        return self.img[100:600, 100:1000]
+    
+    #color shift
+    def random_light_color(self):
+        #brightness
+        B,G,R = cv2.split(self.img)
+        b_rand = random.randint(-50, 50)  #the range of color change
+        for X in [B,G,R]:
+            if b_rand == 0:
+                pass
+            elif b_rand > 0:
+                lim = 255 - b_rand
+                X[X > lim] = 255
+                X[X <= lim] = (b_rand + X[X <= lim]).astype(self.img.dtype)
+            elif b_rand < 0:
+                lim = 0 - b_rand
+                X[X < lim] = 0
+                X[X >= lim] = (b_rand + X[X>= lim]).astype(self.img.dtype)
+        img_merge = cv2.merge((B,G,R))
+        return img_merge
+    
+    #gamma corrction
+    def adjust_gamma(self, gamma):
+        invGamma = 1.0/gamma
+        table = []
+        for i in range(256):
+            table.append(((i/255.0)**invGamma)*255)
+        table = np.array(table).astype("uint8")
+        return cv2.LUT(self.img, table)
+    
+    #rotation
+    def rotation(self, angle, scale):
+        M = cv2.getRotationMatrix2D((self.img.shape[1] / 2, self.img.shape[0] / 2), angle, scale) # center, angle, scale
+        img_rotate = cv2.warpAffine(self.img, M, (self.img.shape[1], self.img.shape[0]))
+        return img_rotate
+
+
+    #perspective transform
+    def random_warp(self, row, col):
+        height,width,channels = self.img.shape
+        
+        #warp:
+        random_margin = 60
+        x1 = random.randint(-random_margin, random_margin)
+        y1 = random.randint(-random_margin, random_margin)
+        x2 = random.randint(width - random_margin - 1, width - 1)
+        y2 = random.randint(-random_margin, random_margin)
+        x3 = random.randint(width - random_margin - 1, width - 1)
+        y3 = random.randint(height - random_margin - 1, height - 1)
+        x4 = random.randint(-random_margin, random_margin)
+        y4 = random.randint(height - random_margin - 1, height - 1)
+
+        dx1 = random.randint(-random_margin, random_margin)
+        dy1 = random.randint(-random_margin, random_margin)
+        dx2 = random.randint(width - random_margin - 1, width - 1)
+        dy2 = random.randint(-random_margin, random_margin)
+        dx3 = random.randint(width - random_margin - 1, width - 1)
+        dy3 = random.randint(height - random_margin - 1, height - 1)
+        dx4 = random.randint(-random_margin, random_margin)
+        dy4 = random.randint(height - random_margin - 1, height - 1)
+
+        pts1 = np.float32([[x1, y1], [x2, y2], [x3, y3], [x4, y4]])
+        pts2 = np.float32([[dx1, dy1], [dx2, dy2], [dx3, dy3], [dx4, dy4]])
+        M_warp = cv2.getPerspectiveTransform(pts1, pts2)
+        img_warp = cv2.warpPerspective(self.img, M_warp, (row, col))
+        return img_warp
+
+img_crop = augmentation(img).crop()
+color_change = augmentation(img).random_light_color()
+gamma_correction = augmentation(img).adjust_gamma(2)
+rotation = augmentation(img).rotation(45, 0.5)
+perspective_transform = augmentation(img).random_warp(1000,700)
+cv2.imshow('crop', img_crop)
+cv2.waitKey() 
+cv2.imshow('color shift', color_change)
+cv2.waitKey() 
+cv2.imshow('gamma correction', gamma_correction)
+cv2.waitKey() 
+cv2.imshow('perspective transform', perspective_transform)
+cv2.waitKey()    
+cv2.destroyAllWindows()
+    
+    
